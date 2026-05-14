@@ -1,0 +1,128 @@
+"""Enums, веса сигналов и dataclasses AI-модуля. См. docs/ai-triage-rules.md."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, TypedDict
+
+
+SCENARIO_SINGLE_UNCONSCIOUS = "single_unconscious"
+SCENARIO_MULTIPLE_VICTIMS = "multiple_victims"
+SCENARIO_SEVERE_BLEEDING = "severe_bleeding"
+SCENARIO_LOW_CONFIDENCE = "low_confidence"
+
+SUPPORTED_SCENARIOS = (
+    SCENARIO_SINGLE_UNCONSCIOUS,
+    SCENARIO_MULTIPLE_VICTIMS,
+    SCENARIO_SEVERE_BLEEDING,
+    SCENARIO_LOW_CONFIDENCE,
+)
+
+RISK_LOW = "low"
+RISK_MEDIUM = "medium"
+RISK_HIGH = "high"
+RISK_CRITICAL = "critical"
+
+STATUS_OK = "OK"
+STATUS_MINOR = "Minor"
+STATUS_SERIOUS = "Serious"
+STATUS_CRITICAL = "Critical"
+
+SIGNAL_LYING = "lying"
+SIGNAL_SITTING = "sitting"
+SIGNAL_STANDING = "standing"
+SIGNAL_NO_MOVEMENT = "no_movement"
+SIGNAL_WEAK_MOVEMENT = "weak_movement"
+SIGNAL_BLEEDING_VISIBLE = "bleeding_visible"
+SIGNAL_SEVERE_BLEEDING = "severe_bleeding"
+SIGNAL_BURNS_VISIBLE = "burns_visible"
+SIGNAL_POSSIBLE_FRACTURE = "possible_fracture"
+SIGNAL_POSSIBLE_UNCONSCIOUS = "possible_unconscious"
+
+SCENE_SIGNAL_MULTIPLE_VICTIMS = "multiple_victims"
+SCENE_SIGNAL_SMOKE_OR_FIRE = "smoke_or_fire"
+SCENE_SIGNAL_LOW_VISIBILITY = "low_visibility"
+
+VICTIM_SIGNAL_WEIGHTS: Dict[str, float] = {
+    SIGNAL_LYING: 0.20,
+    SIGNAL_SITTING: 0.05,
+    SIGNAL_STANDING: 0.00,
+    SIGNAL_NO_MOVEMENT: 0.35,
+    SIGNAL_WEAK_MOVEMENT: 0.15,
+    SIGNAL_BLEEDING_VISIBLE: 0.30,
+    SIGNAL_SEVERE_BLEEDING: 0.45,
+    SIGNAL_BURNS_VISIBLE: 0.25,
+    SIGNAL_POSSIBLE_FRACTURE: 0.15,
+    SIGNAL_POSSIBLE_UNCONSCIOUS: 0.30,
+}
+
+SCENE_SIGNAL_WEIGHTS: Dict[str, float] = {
+    SCENE_SIGNAL_MULTIPLE_VICTIMS: 0.10,
+    SCENE_SIGNAL_SMOKE_OR_FIRE: 0.15,
+    SCENE_SIGNAL_LOW_VISIBILITY: 0.00,
+}
+
+TIEBREAKER_SIGNALS = (
+    SIGNAL_SEVERE_BLEEDING,
+    SIGNAL_POSSIBLE_UNCONSCIOUS,
+)
+
+
+class GPS(TypedDict, total=False):
+    lat: float
+    lon: float
+
+
+@dataclass
+class RawVictim:
+    local_id: int
+    signals: List[str] = field(default_factory=list)
+    bbox: Optional[List[int]] = None
+
+
+@dataclass
+class RawScene:
+    people_count: int
+    observations: List[str] = field(default_factory=list)
+    scene_signals: List[str] = field(default_factory=list)
+    base_confidence: float = 0.85
+
+
+@dataclass
+class ClassifiedVictim:
+    local_id: int
+    signals: List[str]
+    bbox: Optional[List[int]]
+    severity_score: float
+    severity_label: str
+
+
+@dataclass
+class RankedVictim:
+    id: int
+    priority: int
+    severity_score: float
+    severity_label: str
+    status: str
+    bbox: Optional[List[int]]
+    signals: List[str]
+
+
+__all__ = [
+    "SCENARIO_SINGLE_UNCONSCIOUS",
+    "SCENARIO_MULTIPLE_VICTIMS",
+    "SCENARIO_SEVERE_BLEEDING",
+    "SCENARIO_LOW_CONFIDENCE",
+    "SUPPORTED_SCENARIOS",
+    "RISK_LOW", "RISK_MEDIUM", "RISK_HIGH", "RISK_CRITICAL",
+    "STATUS_OK", "STATUS_MINOR", "STATUS_SERIOUS", "STATUS_CRITICAL",
+    "SIGNAL_LYING", "SIGNAL_SITTING", "SIGNAL_STANDING",
+    "SIGNAL_NO_MOVEMENT", "SIGNAL_WEAK_MOVEMENT",
+    "SIGNAL_BLEEDING_VISIBLE", "SIGNAL_SEVERE_BLEEDING",
+    "SIGNAL_BURNS_VISIBLE", "SIGNAL_POSSIBLE_FRACTURE",
+    "SIGNAL_POSSIBLE_UNCONSCIOUS",
+    "SCENE_SIGNAL_MULTIPLE_VICTIMS", "SCENE_SIGNAL_SMOKE_OR_FIRE",
+    "SCENE_SIGNAL_LOW_VISIBILITY",
+    "VICTIM_SIGNAL_WEIGHTS", "SCENE_SIGNAL_WEIGHTS", "TIEBREAKER_SIGNALS",
+    "GPS", "RawVictim", "RawScene", "ClassifiedVictim", "RankedVictim",
+]
