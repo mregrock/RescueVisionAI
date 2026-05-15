@@ -94,6 +94,27 @@ ruff check backend           # линтер
 ruff format backend          # автоформат
 ```
 
+### Pre-commit
+
+После клонирования один раз ставим хуки:
+
+```bash
+pip install -r backend/requirements-dev.txt
+pre-commit install
+```
+
+Дальше при каждом `git commit` автоматически прогоняются `ruff check --fix`, `ruff format`, удаление trailing-whitespace и т.п. Это страхует от того, что CI упадёт на форматировании.
+
+Прогнать вручную по всем файлам:
+
+```bash
+pre-commit run --all-files
+```
+
+### CI
+
+GitHub Actions workflow `.github/workflows/backend-ci.yml` на каждый push в `main` и PR прогоняет `ruff check`, `ruff format --check` и `pytest`. Зелёный CI — обязательное условие для merge.
+
 ---
 
 ## Documentation map
