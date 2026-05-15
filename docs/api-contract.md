@@ -79,17 +79,22 @@ Swagger UI: `http://localhost:8000/docs`
 
 ### Request body
 
+Запрос должен содержать **либо `scenario`, либо `frame`** (хотя бы одно из двух). `scenario` — это mock-режим для demo и тестов; `frame` — реальная инференция по кадру (Phase 1+).
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `incident_id` | string | yes | ID инцидента |
 | `rescuer_id` | string | yes | ID спасателя |
-| `scenario` | enum scenario | yes | demo-сценарий |
+| `scenario` | enum scenario | one of | demo-сценарий (mock) |
+| `frame` | string (base64 JPEG) | one of | кадр с камеры спасателя (real, Phase 1+) |
 | `gps` | object | no | координаты спасателя |
 | `gps.lat` | number | no | широта |
 | `gps.lon` | number | no | долгота |
 | `timestamp` | string (ISO 8601) | no | момент съёмки |
 
-Пример:
+Если переданы оба поля, приоритет у `frame` (real-режим). Если ни одного — `422 Unprocessable Entity`.
+
+Пример mock-запроса:
 
 ```json
 {
@@ -100,6 +105,23 @@ Swagger UI: `http://localhost:8000/docs`
   "timestamp": "2026-05-14T12:34:56Z"
 }
 ```
+
+Пример real-запроса (Phase 1+):
+
+```json
+{
+  "incident_id": "inc-001",
+  "rescuer_id": "resc-42",
+  "frame": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/...",
+  "timestamp": "2026-05-14T12:34:56Z"
+}
+```
+
+Ограничения на `frame`:
+
+- Допустимые форматы: `image/jpeg`, `image/png` (через data-URI prefix или чистый base64).
+- Максимальный размер: 5 МБ (после декодирования).
+- Рекомендуемое разрешение: 640–1280px по длинной стороне (выше — лишняя нагрузка без выигрыша).
 
 ### Response 200
 

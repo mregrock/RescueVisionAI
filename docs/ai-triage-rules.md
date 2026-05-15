@@ -209,13 +209,80 @@ Mock-модуль **не** делает следующего:
 
 ---
 
-## Migration path: mock → real AI
+## Real AI pipeline (Phase 1+)
 
-Когда mock будет заменяться на реальную модель:
+Когда mock-`detector` будет заменяться на реальную инференцию по кадру, pipeline разворачивается так:
 
-1. `detector` — YOLOv8 возвращает bounding boxes и `people_count`.
-2. `classifier` — отдельная модель / эвристика по позе и видимым повреждениям выставляет сигналы.
-3. `ranker` — та же логика scoring и priority, без изменений.
-4. `advisor` — та же rule-based система правил.
+```
+incoming frame (base64 JPEG)
+        │
+        ▼
+1. Frame decoder            — base64 → numpy.ndarray
+        │
+        ▼
+2. Light filter             — детектор людей; если их нет / кадр-дубль / битый — early return
+        │
+        ▼
+3. Pose model               — bbox + 17 keypoints на каждого человека
+        │
+        ▼
+4. Auxiliary detectors      — кровь (HSV-маска по bbox), позже: ожоги, дым, переломы
+        │
+        ▼
+5. Signal extractor         — keypoints + aux-сигналы → список signals из таблицы выше
+        │                       ("lying", "no_movement", "bleeding_visible", ...)
+        ▼
+6. RawScene + RawVictim[]   — существующий внутренний контракт `backend/ai/types.py`
+        │
+        ▼
+7. classifier → ranker → advisor   — БЕЗ ИЗМЕНЕНИЙ
+        │
+        ▼
+JSON ответ по тому же контракту
+```
 
-Контракт API при этом **не меняется**.
+### Разделение perception ↔ decision
+
+Жёсткое правило: **модель определяет только наблюдаемые факты**, решения принимают rule-based слои.
+
+| Зона ответственности | Кто решает | Почему |
+|---|---|---|
+| Есть ли человек в кадре, где он, какая поза | ML-модель | задача восприятия |
+| Видна ли кровь, ожог, дым | ML / OpenCV | задача восприятия |
+| Какой severity_score, priority, status | `classifier` + `ranker` (правила) | должно быть детерминированным и валидируемым с медиками |
+| Какие действия рекомендовать | `advisor` (правила) | safety-critical, нельзя отдавать на откуп LLM/CV |
+
+Если модель ошибается (распознала сидящего как лежащего) — `advisor` не выдаст безумного совета начать СЛР, потому что для `start_bls` нужен ещё и `possible_unconscious`, и его модель должна была независимо детектировать. То есть **ошибка одной модели не каскадится в опасную рекомендацию**.
+
+### Кандидаты моделей
+
+| Шаг | Кандидат | Примечание |
+|---|---|---|
+| Light filter | YOLOv8n (`ultralytics`) | детектит класс `person`, ~6 МБ |
+| Frame deduplication | `imagehash` (perceptual hash) | без модели, чистый Python |
+| Pose | YOLOv8n-pose (`ultralytics`) | 17 keypoints на человека, ~7 МБ |
+| Blood detection | OpenCV (HSV-маска red) | без модели, через `cv2` |
+| Burns/smoke (Phase 2+) | отдельный classifier | требует датасета и дообучения |
+
+Все модели работают через `ultralytics` и сами выбирают backend (CPU / CUDA / MPS / TensorRT) в зависимости от железа. Код не привязан к конкретному устройству.
+
+### Альтернатива: VLM
+
+Вместо каскада из нескольких моделей — vision-language model (Qwen2-VL, LLaVA, либо облако через API) с промптом, требующим JSON по нашей схеме. Преимущества: гибкость, не нужно обучать. Недостатки: дороже по compute, сложнее гарантировать формат ответа, безопасность формулировок надо валидировать отдельно.
+
+Решение по выбору (каскад vs VLM) — на старте Phase 1.
+
+### Контракт между моделью и нашим кодом
+
+Точка стыка — `backend/ai/types.py`:
+
+```python
+RawScene(people_count, observations, scene_signals, base_confidence)
+RawVictim(local_id, signals, bbox)
+```
+
+Реальная реализация `detector` обязана собрать **именно эти структуры**. Дальше всё работает без изменений. Это значит, что:
+
+- Можно менять модели на лету (YOLOv8 → YOLOv11 → VLM), переписывая только `detector`.
+- Тесты `classifier` / `ranker` / `advisor` остаются валидными.
+- Mock-режим (по `scenario`) сохраняется параллельно с real-режимом для demo и unit-тестов.

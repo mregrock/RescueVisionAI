@@ -125,6 +125,50 @@
 
 ---
 
+## Phase 1 — Real AI integration
+
+Цель: заменить mock-`detector` на реальную инференцию по кадру. Mock-режим сохраняется параллельно для demo и unit-тестов.
+
+**Backend**
+
+- [ ] Расширить `AnalyzeRequest` полем `frame: str | None` (base64), валидация "scenario XOR frame".
+- [ ] Подпакет `backend/ai/real/` с разделёнными модулями: `frame_decoder`, `filter`, `pose`, `blood`, `signal_extractor`.
+- [ ] `detector.real(frame)` собирает `RawScene` + `RawVictim[]` из реального инференса.
+- [ ] DI: `get_analyzer()` возвращает real- или mock-реализацию в зависимости от того, что пришло в запросе.
+- [ ] Тесты на real pipeline с фикстурами (положить пару JPEG в `backend/tests/fixtures/`).
+- [ ] Бенчмарк времени отклика; если медленно — кеш моделей в памяти, optional warmup на старте.
+
+**AI**
+
+- [ ] Выбор моделей: YOLOv8n (filter) + YOLOv8n-pose (pose). Альтернатива: VLM, решение задокументировать.
+- [ ] Правила signal extractor: keypoints → `lying / sitting / standing`, multi-frame → `no_movement / weak_movement`.
+- [ ] Blood detection через OpenCV HSV-маску по bbox.
+- [ ] (Опц.) Frame deduplication через perceptual hash.
+
+**Frontend**
+
+- [ ] Страница с `<video>` + `<canvas>`: получение камеры через `getUserMedia`, снимок раз в 1-2 секунды.
+- [ ] Отправка кадра на `POST /analyze` как base64, отображение результата в реальном времени.
+- [ ] Переключатель "demo (scenario) / real (camera)" — для тех, у кого нет камеры на устройстве.
+
+**Инфраструктура**
+
+- [ ] `ultralytics` + `opencv-python` в `backend/requirements.txt`.
+- [ ] Веса моделей не коммитим — скачиваются `ultralytics` при первом запуске.
+- [ ] Docker-образ — учесть, что модели подтянутся при первом старте контейнера, или предзагрузить в Dockerfile.
+
+---
+
+## Phase 2+ (за пределами учебного этапа)
+
+- Realtime через WebSocket / RTSP.
+- Очередь кадров (Redis Streams) + отдельный AI Worker.
+- PostgreSQL для инцидентов и истории, MinIO/S3 для кадров.
+- Multi-frame анализ движения и трендов.
+- Авторизация спасателей и штаба.
+
+---
+
 ## Demo checklist
 
 Прогоняем перед защитой:
