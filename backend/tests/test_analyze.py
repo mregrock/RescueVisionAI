@@ -1,6 +1,10 @@
+from typing import Any
+
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from backend.ai import get_analyzer
 from backend.schemas.common import Scenario
 
 
@@ -80,3 +84,34 @@ def test_analyze_single_unconscious_is_critical(client: TestClient) -> None:
     assert body["overall_risk"] == "critical"
     assert len(body["victims"]) == 1
     assert body["victims"][0]["status"] == "Critical"
+
+
+def test_analyze_uses_dependency_overridden_analyzer(
+    app: FastAPI, client: TestClient
+) -> None:
+    calls: list[str] = []
+
+    def fake_analyzer(scenario: str) -> dict[str, Any]:
+        calls.append(scenario)
+        return {
+            "analysis_id": "an-fake",
+            "overall_risk": "low",
+            "confidence": 0.99,
+            "scene": {"people_count": 0, "observations": []},
+            "victims": [],
+            "recommended_actions": [],
+            "protocols": [],
+            "quality": {"low_confidence": False, "notes": []},
+            "disclaimer": "fake",
+            "scenario": scenario,
+        }
+
+    app.dependency_overrides[get_analyzer] = lambda: fake_analyzer
+    try:
+        response = client.post("/api/v1/analyze", json=_payload("multiple_victims"))
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["analysis_id"] == "an-fake"
+    assert calls == ["multiple_victims"]

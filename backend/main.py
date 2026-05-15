@@ -2,15 +2,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api import api_router
-from .config import CORS_ORIGINS, SERVICE_VERSION
+from .config import get_settings
+from .services import protocols_service
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="RescueVisionAI API", version=SERVICE_VERSION)
+    settings = get_settings()
+
+    # fail-fast: если protocols.json сломан, падаем на старте,
+    # а не на первом запросе к /protocols.
+    protocols_service.warmup()
+
+    app = FastAPI(title="RescueVisionAI API", version=settings.service_version)
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=CORS_ORIGINS,
+        allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],

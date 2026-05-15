@@ -1,6 +1,7 @@
 """Точка входа AI-модуля. Возвращает dict в формате docs/api-contract.md."""
 
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from . import advisor, classifier, detector, ranker
@@ -11,7 +12,10 @@ from .types import (
     RawScene,
 )
 
-__all__ = ["analyze", "SUPPORTED_SCENARIOS"]
+# когда подключится YOLO/gRPC-клиент — заменим через get_analyzer()
+Analyzer = Callable[[str], dict[str, Any]]
+
+__all__ = ["Analyzer", "SUPPORTED_SCENARIOS", "analyze", "get_analyzer"]
 
 _LOW_CONFIDENCE_THRESHOLD = 0.5
 
@@ -68,3 +72,7 @@ def analyze(scenario: str) -> dict[str, Any]:
         "disclaimer": advisor.DISCLAIMER,
         "scenario": scenario,
     }
+
+
+def get_analyzer() -> Analyzer:
+    return analyze

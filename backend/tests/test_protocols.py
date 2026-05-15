@@ -1,4 +1,9 @@
+import json
+
+import pytest
 from fastapi.testclient import TestClient
+
+from backend.services.protocols_service import _load_protocols
 
 EXPECTED_PROTOCOL_IDS = {
     "scene_safety",
@@ -37,3 +42,35 @@ def test_get_unknown_protocol_returns_404(client: TestClient) -> None:
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Protocol not found"
+
+
+def test_load_protocols_missing_file_raises(tmp_path) -> None:
+    with pytest.raises(RuntimeError, match="not found"):
+        _load_protocols(tmp_path / "does_not_exist.json")
+
+
+def test_load_protocols_invalid_json_raises(tmp_path) -> None:
+    bad = tmp_path / "protocols.json"
+    bad.write_text("{not valid json", encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        _load_protocols(bad)
+
+
+def test_load_protocols_empty_raises(tmp_path) -> None:
+    empty = tmp_path / "protocols.json"
+    empty.write_text(json.dumps({"protocols": []}), encoding="utf-8")
+
+    with pytest.raises(RuntimeError, match="no protocols"):
+        _load_protocols(empty)
+
+
+def test_load_protocols_invalid_protocol_raises(tmp_path) -> None:
+    bad = tmp_path / "protocols.json"
+    bad.write_text(
+        json.dumps({"protocols": [{"id": "broken"}]}),  # нет обязательного title
+        encoding="utf-8",
+    )
+
+    with pytest.raises(RuntimeError, match="Invalid protocol"):
+        _load_protocols(bad)

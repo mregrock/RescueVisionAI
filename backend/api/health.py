@@ -1,14 +1,16 @@
-from fastapi import APIRouter
+from typing import Annotated
 
-from ..config import SERVICE_NAME, SERVICE_VERSION
+from fastapi import APIRouter, Depends
+
+from ..config import Settings, get_settings
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-def health() -> dict:
+def health(settings: Annotated[Settings, Depends(get_settings)]) -> dict:
     return {
         "status": "ok",
-        "service": SERVICE_NAME,
-        "version": SERVICE_VERSION,
+        "service": settings.service_name,
+        "version": settings.service_version,
     }

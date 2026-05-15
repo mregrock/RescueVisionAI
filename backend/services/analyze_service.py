@@ -2,13 +2,13 @@ import logging
 
 from fastapi import HTTPException, status
 
-from ..ai import analyze as ai_analyze
+from ..ai import Analyzer
 from ..schemas.analyze import AnalyzeRequest, AnalyzeResponse
 
 logger = logging.getLogger(__name__)
 
 
-def run_analyze(req: AnalyzeRequest) -> AnalyzeResponse:
+def run_analyze(req: AnalyzeRequest, analyzer: Analyzer) -> AnalyzeResponse:
     logger.info(
         "analyze: incident=%s rescuer=%s scenario=%s",
         req.incident_id,
@@ -17,7 +17,7 @@ def run_analyze(req: AnalyzeRequest) -> AnalyzeResponse:
     )
 
     try:
-        result = ai_analyze(req.scenario.value)
+        result = analyzer(req.scenario.value)
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 

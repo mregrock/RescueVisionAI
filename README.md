@@ -72,6 +72,25 @@ curl -X POST http://localhost:8000/api/v1/analyze \
 curl http://localhost:8000/api/v1/protocols
 ```
 
+### Конфигурация через env
+
+Все настройки лежат в `backend/config.py` (`Settings(BaseSettings)`) и переопределяются env-переменными с префиксом `RVA_`. Файл `.env` в корне проекта подхватывается автоматически.
+
+| Переменная | Дефолт | Назначение |
+|---|---|---|
+| `RVA_SERVICE_NAME` | `rescue-vision-ai` | Имя сервиса в `/health` |
+| `RVA_SERVICE_VERSION` | `0.1.0` | Версия в `/health` и Swagger |
+| `RVA_LOG_LEVEL` | `INFO` | Уровень логирования |
+| `RVA_CORS_ORIGINS` | `["*"]` | Список разрешённых origins (JSON-массив) |
+| `RVA_PROTOCOLS_PATH` | `<repo>/protocols.json` | Путь к файлу протоколов |
+
+Пример `.env` для прода:
+
+```
+RVA_CORS_ORIGINS=["https://app.example.com"]
+RVA_LOG_LEVEL=WARNING
+```
+
 ### Запуск через Docker
 
 ```bash
