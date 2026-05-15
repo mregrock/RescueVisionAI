@@ -1,9 +1,3 @@
-"""Сортировка пострадавших, priority, status, overall_risk."""
-
-from __future__ import annotations
-
-from typing import List
-
 from .types import (
     ClassifiedVictim,
     RankedVictim,
@@ -17,7 +11,6 @@ from .types import (
     STATUS_SERIOUS,
     TIEBREAKER_SIGNALS,
 )
-
 
 _LABEL_TO_STATUS = {
     RISK_LOW: STATUS_OK,
@@ -37,7 +30,8 @@ def _tiebreaker_score(victim: ClassifiedVictim) -> int:
     return sum(1 for s in victim.signals if s in TIEBREAKER_SIGNALS)
 
 
-def rank(victims: List[ClassifiedVictim]) -> List[RankedVictim]:
+def rank(victims: list[ClassifiedVictim]) -> list[RankedVictim]:
+    # Сортировка: severity DESC -> tiebreaker DESC -> local_id ASC (стабильность).
     sorted_victims = sorted(
         victims,
         key=lambda v: (-v.severity_score, -_tiebreaker_score(v), v.local_id),
@@ -56,7 +50,7 @@ def rank(victims: List[ClassifiedVictim]) -> List[RankedVictim]:
     ]
 
 
-def overall_risk(victims: List[RankedVictim]) -> str:
+def overall_risk(victims: list[RankedVictim]) -> str:
     if not victims:
         return RISK_LOW
     rank_idx = {label: i for i, label in enumerate(_RISK_ORDER)}

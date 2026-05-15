@@ -1,8 +1,4 @@
-"""Сигналы -> severity_score / severity_label. См. docs/ai-triage-rules.md."""
-
-from __future__ import annotations
-
-from typing import List
+"""Сигналы -> severity_score / severity_label. Правила: docs/ai-triage-rules.md."""
 
 from .types import (
     ClassifiedVictim,
@@ -16,7 +12,7 @@ from .types import (
     VICTIM_SIGNAL_WEIGHTS,
 )
 
-
+# Пороги перебираются сверху вниз, первый сработавший — победитель.
 _THRESHOLDS = (
     (0.80, RISK_CRITICAL),
     (0.50, RISK_HIGH),
@@ -24,15 +20,15 @@ _THRESHOLDS = (
 )
 
 
-def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
-    return max(lo, min(hi, value))
-
-
 def score_to_label(score: float) -> str:
     for threshold, label in _THRESHOLDS:
         if score >= threshold:
             return label
     return RISK_LOW
+
+
+def _clamp(value: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    return max(lo, min(hi, value))
 
 
 def _scene_delta(scene: RawScene) -> float:
@@ -43,9 +39,9 @@ def _victim_delta(victim: RawVictim) -> float:
     return sum(VICTIM_SIGNAL_WEIGHTS.get(s, 0.0) for s in victim.signals)
 
 
-def classify(scene: RawScene, victims: List[RawVictim]) -> List[ClassifiedVictim]:
+def classify(scene: RawScene, victims: list[RawVictim]) -> list[ClassifiedVictim]:
     scene_bonus = _scene_delta(scene)
-    result: List[ClassifiedVictim] = []
+    result: list[ClassifiedVictim] = []
     for victim in victims:
         score = _clamp(_victim_delta(victim) + scene_bonus)
         result.append(

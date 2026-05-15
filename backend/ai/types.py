@@ -1,10 +1,6 @@
-"""Enums, веса сигналов и dataclasses AI-модуля. См. docs/ai-triage-rules.md."""
-
-from __future__ import annotations
+"""Типы и веса сигналов AI-модуля. Правила: docs/ai-triage-rules.md."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, TypedDict
-
 
 SCENARIO_SINGLE_UNCONSCIOUS = "single_unconscious"
 SCENARIO_MULTIPLE_VICTIMS = "multiple_victims"
@@ -43,7 +39,8 @@ SCENE_SIGNAL_MULTIPLE_VICTIMS = "multiple_victims"
 SCENE_SIGNAL_SMOKE_OR_FIRE = "smoke_or_fire"
 SCENE_SIGNAL_LOW_VISIBILITY = "low_visibility"
 
-VICTIM_SIGNAL_WEIGHTS: Dict[str, float] = {
+# Аддитивные веса сигналов пострадавшего; сумма клампится в [0, 1].
+VICTIM_SIGNAL_WEIGHTS: dict[str, float] = {
     SIGNAL_LYING: 0.20,
     SIGNAL_SITTING: 0.05,
     SIGNAL_STANDING: 0.00,
@@ -56,43 +53,40 @@ VICTIM_SIGNAL_WEIGHTS: Dict[str, float] = {
     SIGNAL_POSSIBLE_UNCONSCIOUS: 0.30,
 }
 
-SCENE_SIGNAL_WEIGHTS: Dict[str, float] = {
+# Контекст сцены, добавляемый каждому пострадавшему.
+SCENE_SIGNAL_WEIGHTS: dict[str, float] = {
     SCENE_SIGNAL_MULTIPLE_VICTIMS: 0.10,
     SCENE_SIGNAL_SMOKE_OR_FIRE: 0.15,
     SCENE_SIGNAL_LOW_VISIBILITY: 0.00,
 }
 
+# При равном score эти сигналы поднимают пострадавшего выше в приоритете.
 TIEBREAKER_SIGNALS = (
     SIGNAL_SEVERE_BLEEDING,
     SIGNAL_POSSIBLE_UNCONSCIOUS,
 )
 
 
-class GPS(TypedDict, total=False):
-    lat: float
-    lon: float
-
-
 @dataclass
 class RawVictim:
     local_id: int
-    signals: List[str] = field(default_factory=list)
-    bbox: Optional[List[int]] = None
+    signals: list[str] = field(default_factory=list)
+    bbox: list[int] | None = None
 
 
 @dataclass
 class RawScene:
     people_count: int
-    observations: List[str] = field(default_factory=list)
-    scene_signals: List[str] = field(default_factory=list)
+    observations: list[str] = field(default_factory=list)
+    scene_signals: list[str] = field(default_factory=list)
     base_confidence: float = 0.85
 
 
 @dataclass
 class ClassifiedVictim:
     local_id: int
-    signals: List[str]
-    bbox: Optional[List[int]]
+    signals: list[str]
+    bbox: list[int] | None
     severity_score: float
     severity_label: str
 
@@ -104,25 +98,5 @@ class RankedVictim:
     severity_score: float
     severity_label: str
     status: str
-    bbox: Optional[List[int]]
-    signals: List[str]
-
-
-__all__ = [
-    "SCENARIO_SINGLE_UNCONSCIOUS",
-    "SCENARIO_MULTIPLE_VICTIMS",
-    "SCENARIO_SEVERE_BLEEDING",
-    "SCENARIO_LOW_CONFIDENCE",
-    "SUPPORTED_SCENARIOS",
-    "RISK_LOW", "RISK_MEDIUM", "RISK_HIGH", "RISK_CRITICAL",
-    "STATUS_OK", "STATUS_MINOR", "STATUS_SERIOUS", "STATUS_CRITICAL",
-    "SIGNAL_LYING", "SIGNAL_SITTING", "SIGNAL_STANDING",
-    "SIGNAL_NO_MOVEMENT", "SIGNAL_WEAK_MOVEMENT",
-    "SIGNAL_BLEEDING_VISIBLE", "SIGNAL_SEVERE_BLEEDING",
-    "SIGNAL_BURNS_VISIBLE", "SIGNAL_POSSIBLE_FRACTURE",
-    "SIGNAL_POSSIBLE_UNCONSCIOUS",
-    "SCENE_SIGNAL_MULTIPLE_VICTIMS", "SCENE_SIGNAL_SMOKE_OR_FIRE",
-    "SCENE_SIGNAL_LOW_VISIBILITY",
-    "VICTIM_SIGNAL_WEIGHTS", "SCENE_SIGNAL_WEIGHTS", "TIEBREAKER_SIGNALS",
-    "GPS", "RawVictim", "RawScene", "ClassifiedVictim", "RankedVictim",
-]
+    bbox: list[int] | None
+    signals: list[str]

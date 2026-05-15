@@ -1,5 +1,3 @@
-"""GET /api/v1/health — проверка живости сервиса."""
-
 from fastapi import APIRouter
 
 from ..config import SERVICE_NAME, SERVICE_VERSION

@@ -1,7 +1,3 @@
-"""Smoke-тесты analyze() для всех demo-сценариев."""
-
-from __future__ import annotations
-
 import pytest
 
 from backend.ai import analyze

@@ -46,6 +46,53 @@ AI-ассистент для спасателей МЧС, который ана�
 
 ---
 
+## Quick start (backend)
+
+Требуется Python 3.11+.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+
+uvicorn backend.main:app --reload
+```
+
+Сервис поднимется на `http://localhost:8000`, Swagger UI — на `http://localhost:8000/docs`.
+
+Быстрая проверка:
+
+```bash
+curl http://localhost:8000/api/v1/health
+
+curl -X POST http://localhost:8000/api/v1/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"incident_id":"inc-001","rescuer_id":"resc-42","scenario":"single_unconscious"}'
+
+curl http://localhost:8000/api/v1/protocols
+```
+
+### Запуск через Docker
+
+```bash
+docker build -t rescue-vision-ai-backend -f backend/Dockerfile .
+docker run --rm -p 8000:8000 rescue-vision-ai-backend
+```
+
+Или через Docker Compose:
+```bash
+docker-compose up --build
+```
+
+### Тесты
+
+```bash
+pip install -r backend/requirements-dev.txt
+pytest backend/
+```
+
+---
+
 ## Documentation map
 
 | Документ | О чём |

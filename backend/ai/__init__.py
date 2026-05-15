@@ -1,9 +1,7 @@
-"""Точка входа AI-модуля. Контракт — docs/api-contract.md, правила — docs/ai-triage-rules.md."""
-
-from __future__ import annotations
+"""Точка входа AI-модуля. Возвращает dict в формате docs/api-contract.md."""
 
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 from . import advisor, classifier, detector, ranker
 from .types import (
@@ -13,15 +11,13 @@ from .types import (
     SUPPORTED_SCENARIOS,
 )
 
-
 __all__ = ["analyze", "SUPPORTED_SCENARIOS"]
-
 
 _LOW_CONFIDENCE_THRESHOLD = 0.5
 
 
-def _build_quality(scene: RawScene, confidence: float) -> Dict[str, Any]:
-    notes: List[str] = []
+def _build_quality(scene: RawScene, confidence: float) -> dict[str, Any]:
+    notes: list[str] = []
     low = confidence < _LOW_CONFIDENCE_THRESHOLD
 
     if SCENE_SIGNAL_LOW_VISIBILITY in scene.scene_signals:
@@ -34,7 +30,7 @@ def _build_quality(scene: RawScene, confidence: float) -> Dict[str, Any]:
     return {"low_confidence": low, "notes": notes}
 
 
-def _victim_to_dict(v: RankedVictim) -> Dict[str, Any]:
+def _victim_to_dict(v: RankedVictim) -> dict[str, Any]:
     return {
         "id": v.id,
         "priority": v.priority,
@@ -48,33 +44,26 @@ def _victim_to_dict(v: RankedVictim) -> Dict[str, Any]:
     }
 
 
-def analyze(scenario: str) -> Dict[str, Any]:
+def analyze(scenario: str) -> dict[str, Any]:
     scene, raw_victims = detector.detect(scenario)
     classified = classifier.classify(scene, raw_victims)
     ranked = ranker.rank(classified)
-    risk = ranker.overall_risk(ranked)
 
     confidence = scene.base_confidence
     quality = _build_quality(scene, confidence)
-
-    actions = advisor.build_recommended_actions(
-        scene, ranked, low_confidence=quality["low_confidence"]
-    )
-    protocols = advisor.used_protocols(
-        scene, ranked, low_confidence=quality["low_confidence"]
-    )
+    low = quality["low_confidence"]
 
     return {
         "analysis_id": f"an-{uuid.uuid4().hex[:8]}",
-        "overall_risk": risk,
+        "overall_risk": ranker.overall_risk(ranked),
         "confidence": round(confidence, 3),
         "scene": {
             "people_count": scene.people_count,
             "observations": list(scene.observations),
         },
         "victims": [_victim_to_dict(v) for v in ranked],
-        "recommended_actions": actions,
-        "protocols": protocols,
+        "recommended_actions": advisor.build_recommended_actions(scene, ranked, low),
+        "protocols": advisor.used_protocols(scene, ranked, low),
         "quality": quality,
         "disclaimer": advisor.DISCLAIMER,
         "scenario": scenario,

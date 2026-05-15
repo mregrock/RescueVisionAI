@@ -1,8 +1,4 @@
-"""Blueprints для 4 demo-сценариев. Подробнее в docs/ai-triage-rules.md."""
-
-from __future__ import annotations
-
-from typing import Dict
+"""Blueprint'ы demo-сценариев для mock-детектора."""
 
 from .types import (
     RawScene,
@@ -25,7 +21,7 @@ from .types import (
 )
 
 
-SCENARIO_BLUEPRINTS: Dict[str, dict] = {
+SCENARIO_BLUEPRINTS: dict[str, dict] = {
     SCENARIO_SINGLE_UNCONSCIOUS: {
         "scene": RawScene(
             people_count=1,
@@ -34,7 +30,6 @@ SCENARIO_BLUEPRINTS: Dict[str, dict] = {
                 "Пострадавший лежит без видимых движений",
                 "Видимых преград и опасностей на сцене не обнаружено",
             ],
-            scene_signals=[],
             base_confidence=0.85,
         ),
         "victims": [
@@ -54,7 +49,6 @@ SCENARIO_BLUEPRINTS: Dict[str, dict] = {
                 "На одежде/коже видны следы крови",
                 "Поза — полусидячая, есть слабые движения",
             ],
-            scene_signals=[],
             base_confidence=0.85,
         ),
         "victims": [

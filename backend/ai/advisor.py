@@ -1,8 +1,4 @@
-"""Rule-based рекомендации и first_aid. См. docs/ai-triage-rules.md."""
-
-from __future__ import annotations
-
-from typing import Dict, List
+"""Rule-based рекомендации и first-aid. Правила: docs/ai-triage-rules.md."""
 
 from .types import (
     RankedVictim,
@@ -18,7 +14,7 @@ from .types import (
 )
 
 
-_ACTIONS: Dict[str, dict] = {
+_ACTIONS: dict[str, dict] = {
     "ensure_safety": {
         "title": "Убедитесь в безопасности места",
         "description": (
@@ -84,6 +80,7 @@ _ACTIONS: Dict[str, dict] = {
     },
 }
 
+# Стабильный порядок чеклиста; реальный список фильтруется по триггерам.
 _ACTION_ORDER = [
     "ensure_safety",
     "primary_assessment",
@@ -95,17 +92,17 @@ _ACTION_ORDER = [
 ]
 
 
-def _has_any_signal(victims: List[RankedVictim], *signals: str) -> bool:
+def _has_any_signal(victims: list[RankedVictim], *signals: str) -> bool:
     target = set(signals)
     return any(target.intersection(v.signals) for v in victims)
 
 
 def build_recommended_actions(
     scene: RawScene,
-    victims: List[RankedVictim],
+    victims: list[RankedVictim],
     low_confidence: bool,
-) -> List[dict]:
-    active: List[str] = ["ensure_safety", "primary_assessment"]
+) -> list[dict]:
+    active: list[str] = ["ensure_safety", "primary_assessment"]
 
     if _has_any_signal(victims, SIGNAL_LYING, SIGNAL_NO_MOVEMENT):
         active.append("check_consciousness_breathing")
@@ -133,11 +130,11 @@ def build_recommended_actions(
 
 def used_protocols(
     scene: RawScene,
-    victims: List[RankedVictim],
+    victims: list[RankedVictim],
     low_confidence: bool,
-) -> List[str]:
+) -> list[str]:
     actions = build_recommended_actions(scene, victims, low_confidence)
-    seen: List[str] = []
+    seen: list[str] = []
     for action in actions:
         for proto_id in _ACTIONS[action["id"]]["protocols"]:
             if proto_id not in seen:
@@ -145,7 +142,7 @@ def used_protocols(
     return seen
 
 
-_FIRST_AID_RULES: Dict[str, str] = {
+_FIRST_AID_RULES: dict[str, str] = {
     SIGNAL_LYING: "Оцените сознание и дыхание согласно протоколу первичной оценки.",
     SIGNAL_NO_MOVEMENT: "Оцените сознание и дыхание согласно протоколу первичной оценки.",
     SIGNAL_POSSIBLE_UNCONSCIOUS: (
@@ -165,7 +162,7 @@ _FIRST_AID_RULES: Dict[str, str] = {
     ),
 }
 
-_SIGNAL_TO_PROTOCOL: Dict[str, str] = {
+_SIGNAL_TO_PROTOCOL: dict[str, str] = {
     SIGNAL_LYING: "primary_assessment",
     SIGNAL_NO_MOVEMENT: "primary_assessment",
     SIGNAL_POSSIBLE_UNCONSCIOUS: "basic_life_support",
@@ -178,8 +175,8 @@ _SIGNAL_TO_PROTOCOL: Dict[str, str] = {
 _SAFETY_STEP = "Убедитесь в безопасности места перед оказанием помощи."
 
 
-def build_first_aid(victim: RankedVictim) -> List[str]:
-    steps: List[str] = [_SAFETY_STEP]
+def build_first_aid(victim: RankedVictim) -> list[str]:
+    steps: list[str] = [_SAFETY_STEP]
     for signal in victim.signals:
         step = _FIRST_AID_RULES.get(signal)
         if step and step not in steps:
@@ -187,8 +184,8 @@ def build_first_aid(victim: RankedVictim) -> List[str]:
     return steps
 
 
-def build_victim_protocols(victim: RankedVictim) -> List[str]:
-    result: List[str] = ["scene_safety"]
+def build_victim_protocols(victim: RankedVictim) -> list[str]:
+    result: list[str] = ["scene_safety"]
     for signal in victim.signals:
         proto = _SIGNAL_TO_PROTOCOL.get(signal)
         if proto and proto not in result:
