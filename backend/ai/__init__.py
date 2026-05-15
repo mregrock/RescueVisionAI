@@ -5,10 +5,10 @@ from typing import Any
 
 from . import advisor, classifier, detector, ranker
 from .types import (
-    RankedVictim,
-    RawScene,
     SCENE_SIGNAL_LOW_VISIBILITY,
     SUPPORTED_SCENARIOS,
+    RankedVictim,
+    RawScene,
 )
 
 __all__ = ["analyze", "SUPPORTED_SCENARIOS"]

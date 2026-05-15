@@ -1,8 +1,6 @@
 """Blueprint'ы demo-сценариев для mock-детектора."""
 
 from .types import (
-    RawScene,
-    RawVictim,
     SCENARIO_LOW_CONFIDENCE,
     SCENARIO_MULTIPLE_VICTIMS,
     SCENARIO_SEVERE_BLEEDING,
@@ -18,8 +16,9 @@ from .types import (
     SIGNAL_STANDING,
     SIGNAL_WEAK_MOVEMENT,
     SUPPORTED_SCENARIOS,
+    RawScene,
+    RawVictim,
 )
-
 
 SCENARIO_BLUEPRINTS: dict[str, dict] = {
     SCENARIO_SINGLE_UNCONSCIOUS: {
@@ -40,7 +39,6 @@ SCENARIO_BLUEPRINTS: dict[str, dict] = {
             ),
         ],
     },
-
     SCENARIO_SEVERE_BLEEDING: {
         "scene": RawScene(
             people_count=1,
@@ -59,7 +57,6 @@ SCENARIO_BLUEPRINTS: dict[str, dict] = {
             ),
         ],
     },
-
     SCENARIO_MULTIPLE_VICTIMS: {
         "scene": RawScene(
             people_count=3,
@@ -72,12 +69,21 @@ SCENARIO_BLUEPRINTS: dict[str, dict] = {
             base_confidence=0.70,
         ),
         "victims": [
-            RawVictim(local_id=1, signals=[SIGNAL_LYING, SIGNAL_NO_MOVEMENT], bbox=[40, 200, 240, 460]),
-            RawVictim(local_id=2, signals=[SIGNAL_SITTING, SIGNAL_BLEEDING_VISIBLE], bbox=[260, 180, 460, 440]),
-            RawVictim(local_id=3, signals=[SIGNAL_STANDING, SIGNAL_WEAK_MOVEMENT], bbox=[480, 160, 620, 440]),
+            RawVictim(
+                local_id=1, signals=[SIGNAL_LYING, SIGNAL_NO_MOVEMENT], bbox=[40, 200, 240, 460]
+            ),
+            RawVictim(
+                local_id=2,
+                signals=[SIGNAL_SITTING, SIGNAL_BLEEDING_VISIBLE],
+                bbox=[260, 180, 460, 440],
+            ),
+            RawVictim(
+                local_id=3,
+                signals=[SIGNAL_STANDING, SIGNAL_WEAK_MOVEMENT],
+                bbox=[480, 160, 620, 440],
+            ),
         ],
     },
-
     SCENARIO_LOW_CONFIDENCE: {
         "scene": RawScene(
             people_count=1,

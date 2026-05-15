@@ -1,6 +1,4 @@
 from .types import (
-    ClassifiedVictim,
-    RankedVictim,
     RISK_CRITICAL,
     RISK_HIGH,
     RISK_LOW,
@@ -10,6 +8,8 @@ from .types import (
     STATUS_OK,
     STATUS_SERIOUS,
     TIEBREAKER_SIGNALS,
+    ClassifiedVictim,
+    RankedVictim,
 )
 
 _LABEL_TO_STATUS = {

@@ -1,15 +1,15 @@
 """Сигналы -> severity_score / severity_label. Правила: docs/ai-triage-rules.md."""
 
 from .types import (
-    ClassifiedVictim,
-    RawScene,
-    RawVictim,
     RISK_CRITICAL,
     RISK_HIGH,
     RISK_LOW,
     RISK_MEDIUM,
     SCENE_SIGNAL_WEIGHTS,
     VICTIM_SIGNAL_WEIGHTS,
+    ClassifiedVictim,
+    RawScene,
+    RawVictim,
 )
 
 # Пороги перебираются сверху вниз, первый сработавший — победитель.

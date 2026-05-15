@@ -33,10 +33,7 @@ _PROTOCOLS = _load_protocols()
 
 
 def list_protocols() -> list[ProtocolSummary]:
-    return [
-        ProtocolSummary(id=p.id, title=p.title, tags=p.tags)
-        for p in _PROTOCOLS.values()
-    ]
+    return [ProtocolSummary(id=p.id, title=p.title, tags=p.tags) for p in _PROTOCOLS.values()]
 
 
 def get_protocol(protocol_id: str) -> Protocol | None:

@@ -1,8 +1,6 @@
 """Rule-based рекомендации и first-aid. Правила: docs/ai-triage-rules.md."""
 
 from .types import (
-    RankedVictim,
-    RawScene,
     SCENE_SIGNAL_LOW_VISIBILITY,
     SIGNAL_BLEEDING_VISIBLE,
     SIGNAL_BURNS_VISIBLE,
@@ -11,8 +9,9 @@ from .types import (
     SIGNAL_POSSIBLE_FRACTURE,
     SIGNAL_POSSIBLE_UNCONSCIOUS,
     SIGNAL_SEVERE_BLEEDING,
+    RankedVictim,
+    RawScene,
 )
-
 
 _ACTIONS: dict[str, dict] = {
     "ensure_safety": {
@@ -154,8 +153,7 @@ _FIRST_AID_RULES: dict[str, str] = {
         "необходимости жгут выше раны согласно протоколу."
     ),
     SIGNAL_BURNS_VISIBLE: (
-        "Охладите ожог чистой водой 10–20 минут, накройте чистой повязкой. "
-        "Не вскрывайте пузыри."
+        "Охладите ожог чистой водой 10–20 минут, накройте чистой повязкой. " "Не вскрывайте пузыри."
     ),
     SIGNAL_POSSIBLE_FRACTURE: (
         "Иммобилизуйте конечность, не перемещайте пострадавшего без необходимости."

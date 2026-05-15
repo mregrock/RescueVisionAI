@@ -15,7 +15,6 @@ from backend.ai.types import (
     SUPPORTED_SCENARIOS,
 )
 
-
 TOP_LEVEL_FIELDS = {
     "analysis_id",
     "overall_risk",
@@ -45,8 +44,17 @@ def test_analyze_returns_contract_shape(scenario: str) -> None:
     assert isinstance(scene["observations"], list)
 
     for v in result["victims"]:
-        assert {"id", "priority", "severity_score", "severity_label",
-                "status", "bbox", "signals", "first_aid", "protocols"}.issubset(v.keys())
+        assert {
+            "id",
+            "priority",
+            "severity_score",
+            "severity_label",
+            "status",
+            "bbox",
+            "signals",
+            "first_aid",
+            "protocols",
+        }.issubset(v.keys())
         assert 0.0 <= v["severity_score"] <= 1.0
         assert v["priority"] >= 1
 

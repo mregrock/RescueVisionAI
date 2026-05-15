@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from .common import RiskLevel, Scenario, VictimStatus
@@ -13,7 +15,7 @@ class AnalyzeRequest(BaseModel):
     rescuer_id: str
     scenario: Scenario
     gps: Gps | None = None
-    timestamp: str | None = Field(default=None, description="ISO 8601")
+    timestamp: datetime | None = None
 
     model_config = ConfigDict(
         json_schema_extra={

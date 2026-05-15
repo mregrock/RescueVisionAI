@@ -13,9 +13,7 @@ def _payload(scenario: str = Scenario.single_unconscious.value) -> dict:
 
 
 @pytest.mark.parametrize("scenario", [s.value for s in Scenario])
-def test_analyze_all_scenarios_match_contract(
-    client: TestClient, scenario: str
-) -> None:
+def test_analyze_all_scenarios_match_contract(client: TestClient, scenario: str) -> None:
     response = client.post("/api/v1/analyze", json=_payload(scenario))
 
     assert response.status_code == 200
@@ -49,9 +47,7 @@ def test_analyze_missing_required_field_returns_422(client: TestClient) -> None:
 
 
 def test_analyze_unknown_scenario_returns_422(client: TestClient) -> None:
-    response = client.post(
-        "/api/v1/analyze", json=_payload("totally_unknown_scenario")
-    )
+    response = client.post("/api/v1/analyze", json=_payload("totally_unknown_scenario"))
 
     assert response.status_code == 422
 
@@ -66,6 +62,15 @@ def test_analyze_with_optional_fields(client: TestClient) -> None:
     response = client.post("/api/v1/analyze", json=payload)
 
     assert response.status_code == 200
+
+
+def test_analyze_invalid_timestamp_returns_422(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/analyze",
+        json={**_payload(), "timestamp": "not-a-date"},
+    )
+
+    assert response.status_code == 422
 
 
 def test_analyze_single_unconscious_is_critical(client: TestClient) -> None:

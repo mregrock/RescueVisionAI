@@ -1,6 +1,5 @@
 from fastapi.testclient import TestClient
 
-
 EXPECTED_PROTOCOL_IDS = {
     "scene_safety",
     "primary_assessment",

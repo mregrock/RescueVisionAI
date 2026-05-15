@@ -2,17 +2,14 @@
 
 from dataclasses import dataclass, field
 
-SCENARIO_SINGLE_UNCONSCIOUS = "single_unconscious"
-SCENARIO_MULTIPLE_VICTIMS = "multiple_victims"
-SCENARIO_SEVERE_BLEEDING = "severe_bleeding"
-SCENARIO_LOW_CONFIDENCE = "low_confidence"
+from ..schemas.common import Scenario
 
-SUPPORTED_SCENARIOS = (
-    SCENARIO_SINGLE_UNCONSCIOUS,
-    SCENARIO_MULTIPLE_VICTIMS,
-    SCENARIO_SEVERE_BLEEDING,
-    SCENARIO_LOW_CONFIDENCE,
-)
+SCENARIO_SINGLE_UNCONSCIOUS = Scenario.single_unconscious.value
+SCENARIO_MULTIPLE_VICTIMS = Scenario.multiple_victims.value
+SCENARIO_SEVERE_BLEEDING = Scenario.severe_bleeding.value
+SCENARIO_LOW_CONFIDENCE = Scenario.low_confidence.value
+
+SUPPORTED_SCENARIOS = tuple(s.value for s in Scenario)
 
 RISK_LOW = "low"
 RISK_MEDIUM = "medium"

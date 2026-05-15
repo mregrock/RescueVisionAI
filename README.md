@@ -84,11 +84,14 @@ docker run --rm -p 8000:8000 rescue-vision-ai-backend
 docker-compose up --build
 ```
 
-### Тесты
+### Тесты и линтер
 
 ```bash
 pip install -r backend/requirements-dev.txt
-pytest backend/
+
+pytest                       # тесты (конфиг в pyproject.toml)
+ruff check backend           # линтер
+ruff format backend          # автоформат
 ```
 
 ---
