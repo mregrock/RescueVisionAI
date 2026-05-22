@@ -12,10 +12,12 @@ from .types import (
     RawScene,
 )
 
-# когда подключится YOLO/gRPC-клиент — заменим через get_analyzer()
+# Mock-режим: сценарий → результат
 Analyzer = Callable[[str], dict[str, Any]]
+# Real-режим: байты изображения → результат
+ImageAnalyzer = Callable[[bytes], dict[str, Any]]
 
-__all__ = ["Analyzer", "SUPPORTED_SCENARIOS", "analyze", "get_analyzer"]
+__all__ = ["Analyzer", "ImageAnalyzer", "SUPPORTED_SCENARIOS", "analyze", "analyze_image", "get_analyzer", "get_image_analyzer"]
 
 _LOW_CONFIDENCE_THRESHOLD = 0.5
 
@@ -76,3 +78,34 @@ def analyze(scenario: str) -> dict[str, Any]:
 
 def get_analyzer() -> Analyzer:
     return analyze
+
+
+def analyze_image(image_bytes: bytes) -> dict[str, Any]:
+    """Real-режим: анализ реального кадра через Model 1 → Model 2."""
+    scene, raw_victims = detector.detect_from_image(image_bytes)
+    classified = classifier.classify(scene, raw_victims)
+    ranked = ranker.rank(classified)
+
+    confidence = scene.base_confidence
+    quality = _build_quality(scene, confidence)
+    low = quality["low_confidence"]
+
+    return {
+        "analysis_id": f"an-{uuid.uuid4().hex[:8]}",
+        "overall_risk": ranker.overall_risk(ranked),
+        "confidence": round(confidence, 3),
+        "scene": {
+            "people_count": scene.people_count,
+            "observations": list(scene.observations),
+        },
+        "victims": [_victim_to_dict(v) for v in ranked],
+        "recommended_actions": advisor.build_recommended_actions(scene, ranked, low),
+        "protocols": advisor.used_protocols(scene, ranked, low),
+        "quality": quality,
+        "disclaimer": advisor.DISCLAIMER,
+        "scenario": None,
+    }
+
+
+def get_image_analyzer() -> ImageAnalyzer:
+    return analyze_image

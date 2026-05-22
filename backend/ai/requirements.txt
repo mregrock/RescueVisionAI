@@ -1,0 +1,10 @@
+# AI / Triage / Protocols module — runtime dependencies.
+
+# Model 1 + Model 2 (YOLOv8n, YOLOv8n-pose)
+ultralytics>=8.0
+opencv-python>=4.9
+numpy>=1.26
+# torch подтягивается как зависимость ultralytics
+
+# Тесты
+pytest>=8.0

@@ -207,11 +207,12 @@ Protocol      { id, title, steps_json, tags }
 - Тесты, ruff, pre-commit, CI, Docker, HEALTHCHECK.
 - Без БД, без очередей, без real-инференции.
 
-### Phase 1 — Real AI (next)
+### Phase 1 — Real AI (DONE)
 
-- Реальный `detector` по `frame`: light filter + pose model + signal extractor.
-- Параллельно сохраняется mock-режим по `scenario`.
-- Веб-страница (фронт) снимает кадры с камеры устройства и шлёт через `POST /analyze`.
+- `POST /api/v1/analyze/image` — новый endpoint, принимает кадр через multipart/form-data.
+- Model 1 (YOLOv8n): фильтрует кадры без людей — Model 2 не запускается впустую.
+- Model 2 (YOLOv8n-pose): детекция людей + 17 COCO keypoints → сигналы позы и травм.
+- Mock-режим по `scenario` сохраняется параллельно для demo и тестов.
 - Без realtime-стриминга, без БД — один запрос ↔ один ответ.
 
 ### Phase 2+ — Production (out of scope учебного этапа)

@@ -37,7 +37,7 @@ AI-ассистент для спасателей МЧС, который ана�
 |---|---|
 | Frontend | React + Vite + Tailwind CSS |
 | Backend / API | FastAPI (Python), Pydantic, Uvicorn |
-| AI (MVP) | Mock / rule-based модуль, далее — YOLOv8 + классификатор |
+| AI | YOLOv8n (фильтр кадров) + YOLOv8n-pose (детекция + поза), rule-based scoring |
 | Очередь / кэш | Redis (на этапе расширения) |
 | Хранилище | PostgreSQL + MinIO (на этапе расширения) |
 | Инфраструктура | Docker + Docker Compose |
@@ -65,9 +65,16 @@ uvicorn backend.main:app --reload
 ```bash
 curl http://localhost:8000/api/v1/health
 
+# Mock-режим (demo-сценарий)
 curl -X POST http://localhost:8000/api/v1/analyze \
   -H "Content-Type: application/json" \
   -d '{"incident_id":"inc-001","rescuer_id":"resc-42","scenario":"single_unconscious"}'
+
+# Real-режим (реальный кадр)
+curl -X POST http://localhost:8000/api/v1/analyze/image \
+  -F "image=@/path/to/photo.jpg" \
+  -F "incident_id=inc-001" \
+  -F "rescuer_id=resc-42"
 
 curl http://localhost:8000/api/v1/protocols
 ```
@@ -153,13 +160,13 @@ GitHub Actions workflow `.github/workflows/backend-ci.yml` на каждый pus
 В MVP входит:
 
 - Frontend с выбором demo-сценария и отображением результата анализа.
-- Backend FastAPI с 4 endpoints и стабильным API-контрактом.
-- Mock AI-модуль, возвращающий правдоподобный анализ по сценарию.
+- Backend FastAPI с 5 endpoints и стабильным API-контрактом.
+- Mock AI-модуль, возвращающий правдоподобный анализ по сценарию (`POST /analyze`).
+- Real AI-модуль на базе YOLOv8n + YOLOv8n-pose для анализа реальных кадров (`POST /analyze/image`).
 - Файл [`protocols.json`](protocols.json) с базовыми медицинскими протоколами.
 
 В MVP **не входит**:
 
-- Реальная обработка изображений (YOLO/CV).
 - Очереди, БД, S3-хранилище.
 - Авторизация и продакшен-инфраструктура.
 - Мобильное приложение (используется веб-интерфейс).

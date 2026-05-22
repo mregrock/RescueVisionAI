@@ -117,11 +117,14 @@ backend/
 
 ```
 backend/ai/
-├── detector.py     # mock: возвращает scene + signals по сценарию
-├── classifier.py   # mock: сигналы → severity_score / label
-├── ranker.py       # сортировка по score, priority
-├── advisor.py      # rule-based рекомендации и first_aid
-└── scenarios.py    # blueprints по 4 сценариям
+├── detector.py          # detect() mock + detect_from_image() real
+├── frame_filter.py      # Model 1: YOLOv8n — фильтр кадров
+├── triage_model.py      # Model 2: YOLOv8n-pose — детекция + поза
+├── signal_extractor.py  # keypoints + HSV → signals
+├── classifier.py        # signals → severity_score / label
+├── ranker.py            # сортировка по score, priority
+├── advisor.py           # rule-based рекомендации и first_aid
+└── scenarios.py         # blueprints по 4 demo-сценариям
 ```
 
 ### Deliverables
@@ -141,8 +144,7 @@ backend/ai/
 
 ### Not in scope
 
-- Реальные модели YOLO / ResNet.
-- Обучение моделей.
+- Обучение / дообучение моделей.
 - Frontend-рендеринг.
 - API-роутинг.
 

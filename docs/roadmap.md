@@ -131,31 +131,30 @@
 
 **Backend**
 
-- [ ] Расширить `AnalyzeRequest` полем `frame: str | None` (base64), валидация "scenario XOR frame".
-- [ ] Подпакет `backend/ai/real/` с разделёнными модулями: `frame_decoder`, `filter`, `pose`, `blood`, `signal_extractor`.
-- [ ] `detector.real(frame)` собирает `RawScene` + `RawVictim[]` из реального инференса.
-- [ ] DI: `get_analyzer()` возвращает real- или mock-реализацию в зависимости от того, что пришло в запросе.
+- [x] Новый endpoint `POST /api/v1/analyze/image` (multipart/form-data).
+- [x] `detect_from_image()` в `detector.py` — запускает Model 1 → Model 2.
+- [x] `analyze_image()` в `ai/__init__.py` + DI через `get_image_analyzer()`.
+- [x] Модели загружаются лениво (singleton) и кешируются в памяти.
 - [ ] Тесты на real pipeline с фикстурами (положить пару JPEG в `backend/tests/fixtures/`).
-- [ ] Бенчмарк времени отклика; если медленно — кеш моделей в памяти, optional warmup на старте.
 
 **AI**
 
-- [ ] Выбор моделей: YOLOv8n (filter) + YOLOv8n-pose (pose). Альтернатива: VLM, решение задокументировать.
-- [ ] Правила signal extractor: keypoints → `lying / sitting / standing`, multi-frame → `no_movement / weak_movement`.
-- [ ] Blood detection через OpenCV HSV-маску по bbox.
-- [ ] (Опц.) Frame deduplication через perceptual hash.
+- [x] Model 1: YOLOv8n — фильтр кадров без людей (`frame_filter.py`).
+- [x] Model 2: YOLOv8n-pose — детекция + 17 COCO keypoints (`triage_model.py`).
+- [x] Signal extractor: keypoints → `lying / sitting / standing`, `possible_unconscious` (`signal_extractor.py`).
+- [x] Blood/burns detection через OpenCV HSV-маску по bbox.
 
 **Frontend**
 
 - [ ] Страница с `<video>` + `<canvas>`: получение камеры через `getUserMedia`, снимок раз в 1-2 секунды.
-- [ ] Отправка кадра на `POST /analyze` как base64, отображение результата в реальном времени.
-- [ ] Переключатель "demo (scenario) / real (camera)" — для тех, у кого нет камеры на устройстве.
+- [ ] Отправка кадра на `POST /analyze/image` как multipart, отображение результата.
+- [ ] Переключатель "demo (scenario) / real (camera)".
 
 **Инфраструктура**
 
-- [ ] `ultralytics` + `opencv-python` в `backend/requirements.txt`.
-- [ ] Веса моделей не коммитим — скачиваются `ultralytics` при первом запуске.
-- [ ] Docker-образ — учесть, что модели подтянутся при первом старте контейнера, или предзагрузить в Dockerfile.
+- [x] `ultralytics`, `opencv-python`, `python-multipart` в `backend/requirements.txt`.
+- [x] Веса моделей не коммитим (`.gitignore: *.pt`) — скачиваются `ultralytics` при первом запуске.
+- [ ] Docker-образ — предзагрузить веса в Dockerfile или при первом старте контейнера.
 
 ---
 
