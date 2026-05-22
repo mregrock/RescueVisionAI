@@ -1,6 +1,8 @@
 # Roadmap
 
-План реализации RescueVisionAI на 4 недели + MVP-фокус и demo checklist. Документ намеренно короткий — это рабочий план, а не отчёт.
+План реализации RescueVisionAI по этапам и demo checklist.
+
+Главный документ по AI-пайплайну: [`docs/ai-pipeline-v2.md`](ai-pipeline-v2.md).
 
 ---
 
@@ -9,162 +11,136 @@
 К концу разработки команда должна показать **рабочее end-to-end demo**:
 
 1. Открыли веб-приложение спасателя.
-2. Выбрали demo-сценарий.
-3. Нажали «Анализ».
-4. Получили JSON от backend → увидели пострадавших, риски и рекомендации.
-5. Перешли на страницу протоколов и открыли один из них.
+2. **Demo сценарий:** выбрали один из 4 mock-сценариев → получили структурированный анализ → увидели пострадавших, риски, рекомендации, протоколы.
+3. **Real сценарий:** сделали снимок (или серию снимков) с камеры → AI определил позу пострадавших → triage-движок по протоколу START выдал severity и рекомендации.
+4. Перешли на страницу протоколов и открыли любой из них.
 
-Всё должно работать **локально**, без интернета и внешних сервисов.
-
----
-
-## Sprint 0: kickoff (день 1)
-
-- [x] Согласовать архитектуру — см. [`docs/architecture.md`](architecture.md).
-- [x] Зафиксировать API-контракт — см. [`docs/api-contract.md`](api-contract.md).
-- [x] Зафиксировать triage-правила — см. [`docs/ai-triage-rules.md`](ai-triage-rules.md).
-- [x] Распределить роли — см. [`docs/roles-and-scope.md`](roles-and-scope.md).
-- [ ] Инициализировать репозиторий и базовые папки `backend/`, `frontend/`.
+Всё работает **локально**, без интернета и внешних сервисов.
 
 ---
 
-## Week 1 — каркас
+## Sprint 0: kickoff (день 1) — DONE
 
-Цель: «всё запускается, ничего полезного не делает».
-
-**Backend**
-
-- [ ] FastAPI-проект, `uvicorn`, CORS, Swagger.
-- [ ] Endpoint `GET /api/v1/health`.
-- [ ] Заглушка `POST /api/v1/analyze`, возвращающая фиксированный JSON.
-
-**Frontend**
-
-- [ ] React + Vite + Tailwind инициализация.
-- [ ] Главный экран: селектор сценария + кнопка «Анализ».
-- [ ] API-клиент, дергающий `/health` и `/analyze` (или mock JSON).
-
-**AI**
-
-- [ ] Скелет модуля `backend/ai/` с функцией `analyze(scenario)`.
-- [ ] Black-list безопасных формулировок.
-- [ ] Черновик [`protocols.json`](../protocols.json) (минимум 3 протокола).
+- [x] Архитектура — см. [`docs/architecture.md`](architecture.md).
+- [x] API-контракт — см. [`docs/api-contract.md`](api-contract.md).
+- [x] Triage-правила v1 — см. [`docs/ai-triage-rules.md`](ai-triage-rules.md).
+- [x] Распределение ролей — см. [`docs/roles-and-scope.md`](roles-and-scope.md).
+- [x] Инициализированы папки `backend/` и `frontend/`.
 
 ---
 
-## Week 2 — полезная функциональность
+## Phase 0 — Каркас и mock-режим (DONE)
 
-Цель: «по сценарию выдаётся осмысленный результат».
+Цель: «всё запускается, mock работает для всех 4 сценариев».
 
-**Backend**
+**Backend (DONE)**
+- [x] FastAPI, CORS, Swagger, pydantic-settings.
+- [x] `GET /api/v1/health`.
+- [x] `POST /api/v1/analyze` по сценарию.
+- [x] `GET /api/v1/protocols`, `GET /api/v1/protocols/{id}`.
+- [x] Полная Pydantic-схема ответа.
+- [x] Тесты, ruff, pre-commit, CI, Dockerfile, docker-compose.
 
-- [ ] Полная Pydantic-схема `/analyze`.
-- [ ] Интеграция с AI-модулем.
-- [ ] Endpoints `/protocols` и `/protocols/{id}`.
+**Frontend (DONE)**
+- [x] React + Vite + TypeScript + Tailwind.
+- [x] Главный экран: селектор 4 сценариев + кнопка анализа.
+- [x] Loading / error / success состояния.
+- [x] Карточки пострадавших с severity, status, priority, signals.
+- [x] Чеклист `recommended_actions` с возможностью отмечать.
+- [x] Цветовая кодировка статусов (зелёный/жёлтый/оранжевый/красный).
+- [x] Страница `/protocols` (список) и `/protocols/:id` (детали).
+- [x] Индикатор `backend status` по `/health`.
+- [x] Real-режим: страница `/camera` с `getUserMedia` + snapshot → `POST /analyze/image`.
+- [x] Адаптив под телефон.
 
-**Frontend**
-
-- [ ] Карточки пострадавших с severity / status / priority / signals.
-- [ ] Чеклист `recommended_actions` с возможностью отмечать пункты.
-- [ ] Цветовая кодировка статусов.
-- [ ] Loading / error состояния.
-
-**AI**
-
-- [ ] Реализация scoring по всем сигналам.
-- [ ] Маппинги score → severity → status → priority.
-- [ ] Все 4 сценария возвращают корректный результат.
-- [ ] Полный [`protocols.json`](../protocols.json) (все 7 протоколов).
-
----
-
-## Week 3 — UX и интеграция
-
-Цель: «выглядит и ощущается как ассистент спасателя».
-
-**Frontend**
-
-- [ ] Страница `/protocols` со списком и деталями.
-- [ ] Полировка UI: крупные кнопки, контраст, мобильный layout.
-- [ ] Отображение `confidence`, `quality.low_confidence`, `disclaimer`.
-
-**Backend**
-
-- [ ] Обработка ошибок и 422.
-- [ ] Логирование запросов.
-- [ ] Тесты на 4 сценария (smoke).
-
-**AI**
-
-- [ ] Точная подстройка score, чтобы overall_risk совпадал с ожиданиями таблицы сценариев.
-- [ ] Финальная редактура формулировок.
+**AI (DONE — v1, mock + heuristic real)**
+- [x] Mock-модуль `backend/ai/` с поддержкой 4 сценариев.
+- [x] Полный `protocols.json` (7 протоколов).
+- [x] Real-режим v1: YOLOv8n + YOLOv8n-pose + эвристики на keypoints + HSV.
 
 ---
 
-## Week 4 — тестирование, demo, документация
+## Phase 1 — AI Pipeline v2 (CURRENT)
 
-Цель: «готово к показу».
+Цель: заменить эвристики v1 на **обученную нами модель + классический CV + формализованный медицинский triage-протокол**.
 
-- [ ] End-to-end прогон по всем 4 сценариям.
-- [ ] Запись короткого demo-видео или live-демо.
-- [ ] Обновлённый [`README.md`](../README.md) с инструкцией запуска.
-- [ ] Опционально: Docker Compose, чтобы поднять всё одной командой.
-- [ ] Подготовка слайдов / защиты.
+Детальный план — в [`docs/ai-pipeline-v2.md`](ai-pipeline-v2.md). Здесь — только milestones и галочки.
 
----
+### Зачем переписываем v1
 
-## Risks
+v1 на эвристиках работает на demo-сценариях (mock), но **разваливается на реальных кадрах**: классифицирует стоящих как лежащих, ставит «без сознания» при низкой уверенности, HSV-маски ложно срабатывают на коже и фоне. Подробности — в [`docs/ai-pipeline-v2.md`](ai-pipeline-v2.md).
 
-| Риск | Митигация |
-|---|---|
-| Backend задерживается — frontend без данных | Frontend держит локальный mock JSON в формате API-контракта |
-| AI-логика «течёт» в backend | Чёткая граница: backend вызывает `analyze(scenario)`, не знает деталей |
-| Разные представления о JSON у frontend и backend | Источник истины — [`docs/api-contract.md`](api-contract.md), любые правки только через него |
-| Формулировки звучат как медицинский диагноз | Чек-лист безопасных формулировок в [`docs/ai-triage-rules.md`](ai-triage-rules.md) |
-| Не хватает времени на полировку | Сначала закрываем все 4 сценария, потом UX |
+### Этап A — Pose Classifier MLP (3-4 дня) — AI-роль
 
----
+Главная «наша нейросеть»: маленькая MLP, обученная на keypoints от YOLO-pose, классифицирует позу в `{standing, sitting, lying, falling}`.
 
-## Phase 1 — Real AI integration
+- [ ] `prepare_dataset.py`: NTU RGB+D / MPII / Roboflow → JSONL с keypoints + метками.
+- [ ] Собран датасет ≥ 2000 размеченных примеров.
+- [ ] `model.py`: MLP-архитектура (51→64→32→4).
+- [ ] `train_pose_classifier.py`: training loop, early stopping, метрики.
+- [ ] Целевые метрики: accuracy ≥ 0.85, F1 macro ≥ 0.80, recall(lying) ≥ 0.90.
+- [ ] Jupyter notebook с полным процессом обучения + confusion matrix.
+- [ ] Веса в `backend/ai/weights/pose_classifier.pth`.
+- [ ] Интеграция: `backend/ai/pose_classifier.py` заменяет `signal_extractor::_pose_signals`.
+- [ ] Тесты на inference.
 
-Цель: заменить mock-`detector` на реальную инференцию по кадру. Mock-режим сохраняется параллельно для demo и unit-тестов.
+### Этап B — START Triage Engine (1-2 дня) — AI или Backend
 
-**Backend**
+Реализация международного протокола FEMA для triage. Заменяет линейную сумму весов.
 
-- [x] Новый endpoint `POST /api/v1/analyze/image` (multipart/form-data).
-- [x] `detect_from_image()` в `detector.py` — запускает Model 1 → Model 2.
-- [x] `analyze_image()` в `ai/__init__.py` + DI через `get_image_analyzer()`.
-- [x] Модели загружаются лениво (singleton) и кешируются в памяти.
-- [ ] Тесты на real pipeline с фикстурами (положить пару JPEG в `backend/tests/fixtures/`).
+- [ ] Изучить START guidelines (FEMA, CHEMM).
+- [ ] `backend/ai/triage_engine.py` с decision tree.
+- [ ] Confidence gate: при `pose_confidence < 0.5` → max severity = medium.
+- [ ] Mapping START categories (RED/YELLOW/GREEN/BLACK) → наш API (low/medium/high/critical).
+- [ ] ~20 unit-тестов на все комбинации (pose, motion, confidence).
+- [ ] Mermaid-диаграмма decision tree в `docs/ai-triage-rules.md`.
+- [ ] Интеграция в `backend/ai/__init__.py::analyze_image()`.
 
-**AI**
+### Этап C — Motion Analysis (2-3 дня) — опционально
 
-- [x] Model 1: YOLOv8n — фильтр кадров без людей (`frame_filter.py`).
-- [x] Model 2: YOLOv8n-pose — детекция + 17 COCO keypoints (`triage_model.py`).
-- [x] Signal extractor: keypoints → `lying / sitting / standing`, `possible_unconscious` (`signal_extractor.py`).
-- [x] Blood/burns detection через OpenCV HSV-маску по bbox.
+Оптический поток для определения отсутствия движения (главный сигнал бессознательного состояния).
 
-**Frontend**
+- [ ] `backend/ai/motion.py`: `cv2.calcOpticalFlowFarneback` per bbox.
+- [ ] Bbox tracking между кадрами по IoU.
+- [ ] Mapping в `{no_movement, weak_movement, active_movement}`.
+- [ ] API: поддержка multipart с несколькими файлами в `POST /analyze/image` (backwards-compatible).
+- [ ] Frontend: burst capture mode (5 кадров за 1 секунду).
+- [ ] Toggle «single shot / burst» на `/camera`.
 
-- [ ] Страница с `<video>` + `<canvas>`: получение камеры через `getUserMedia`, снимок раз в 1-2 секунды.
-- [ ] Отправка кадра на `POST /analyze/image` как multipart, отображение результата.
-- [ ] Переключатель "demo (scenario) / real (camera)".
+### Этап D — Документация и защита (1 день)
 
-**Инфраструктура**
-
-- [x] `ultralytics`, `opencv-python`, `python-multipart` в `backend/requirements.txt`.
-- [x] Веса моделей не коммитим (`.gitignore: *.pt`) — скачиваются `ultralytics` при первом запуске.
-- [ ] Docker-образ — предзагрузить веса в Dockerfile или при первом старте контейнера.
+- [ ] Обновить `docs/architecture.md` под v2 pipeline.
+- [ ] Обновить `docs/ai-triage-rules.md` под START.
+- [ ] Обновить `backend/ai/README.md`.
+- [ ] Обновить root `README.md` (tech stack, инструкции).
+- [ ] Слайды защиты с метриками модели и архитектурой.
+- [ ] Demo-сценарий записать на видео (бэкап на случай если на защите backend упадёт).
 
 ---
 
 ## Phase 2+ (за пределами учебного этапа)
 
-- Realtime через WebSocket / RTSP.
-- Очередь кадров (Redis Streams) + отдельный AI Worker.
-- PostgreSQL для инцидентов и истории, MinIO/S3 для кадров.
-- Multi-frame анализ движения и трендов.
-- Авторизация спасателей и штаба.
+- **Visual signs CNN** — отдельная обученная нами CNN на размеченных медицинских кадрах для детекции `bleeding_visible`, `burns_visible`, `multiple_injuries`. Требует партнёрства с медучилищем для разметки. Большой scope.
+- **Multi-frame tracking** — устойчивое сопровождение пострадавших между кадрами для history-aware triage.
+- **Realtime через WebSocket** — streaming кадров вместо запрос-ответ.
+- **Очередь кадров (Redis Streams), AI Worker** как отдельный процесс.
+- **PostgreSQL** для инцидентов, **MinIO/S3** для кадров.
+- **Авторизация** спасателей и штаба.
+- **Mobile native app** (React Native / Flutter) для полевых условий.
+- **GPS-карта в штабе** с realtime-позициями спасателей.
+
+---
+
+## Risks (актуальные на Phase 1)
+
+| Риск | Митигация |
+|---|---|
+| Не находится подходящего pose-датасета | Fallback: ручная разметка 200 примеров за вечер. Минимально жизнеспособно. |
+| MLP не дотягивает до F1=0.85 | Эксперименты с LSTM/Transformer + аугментация. В крайнем случае — fallback на эвристики при низкой уверенности. |
+| Motion analysis не успеваем | Опциональный компонент. v2 без него работает (motion=unknown). |
+| На защите спросят «почему не сами обучили YOLO» | См. FAQ в [`docs/ai-pipeline-v2.md`](ai-pipeline-v2.md). |
+| Real-режим упадёт на демо | Mock-режим работает идеально и закрывает demo checklist. Real показываем «во вторую очередь». |
+| Backend не запустится на железе комиссии | Demo-видео записано заранее как бэкап. |
 
 ---
 
@@ -172,17 +148,49 @@
 
 Прогоняем перед защитой:
 
-- [ ] Backend стартует без ошибок (`uvicorn` / Docker).
+**Backend:**
+- [ ] `uvicorn backend.main:app` стартует без ошибок.
 - [ ] `GET /api/v1/health` → `{ "status": "ok" }`.
 - [ ] `POST /api/v1/analyze` отрабатывает на все 4 сценария.
 - [ ] `GET /api/v1/protocols` возвращает 7 протоколов.
 - [ ] `GET /api/v1/protocols/basic_life_support` возвращает шаги.
-- [ ] Frontend открывается, селектор сценариев работает.
-- [ ] Для `single_unconscious` отображается красный Critical.
-- [ ] Для `multiple_victims` отображается 3 карточки с разными приоритетами.
-- [ ] Для `severe_bleeding` подсвечивается рекомендация остановить кровотечение.
-- [ ] Для `low_confidence` отображается предупреждение о низкой уверенности.
-- [ ] На экране везде присутствует `disclaimer`.
-- [ ] Страница протоколов открывается, можно посмотреть любой протокол.
+
+**Frontend:**
+- [ ] Открывается на `localhost:5173`.
+- [ ] Индикатор `backend online` зелёный.
+- [ ] Селектор сценариев работает.
+- [ ] Для `single_unconscious` отображается красный `Critical`.
+- [ ] Для `multiple_victims` рисуются 3 карточки с разными приоритетами.
+- [ ] Для `severe_bleeding` критичные действия выделены красным.
+- [ ] Для `low_confidence` показывается жёлтое предупреждение.
+- [ ] Везде присутствует `disclaimer`.
+- [ ] Страница протоколов открывается, можно посмотреть любой.
+
+**Real-режим (Phase 1 / v2):**
+- [ ] `/camera` запрашивает камеру, видео отображается.
+- [ ] Снимок отправляется на `POST /analyze/image`.
+- [ ] Для стоящего человека → `severity = low`, pose = `standing`.
+- [ ] Для лежащего на полу человека → `severity = high` или `critical`, pose = `lying`.
+- [ ] `confidence` отображается и адекватен реальной уверенности модели.
+- [ ] При неудачной классификации → `quality.low_confidence = true` с понятным предупреждением.
+
+**Защита:**
+- [ ] Notebook с обучением модели открывается.
+- [ ] Метрики на test set приложены в README.
+- [ ] Confusion matrix показывает разумное распределение ошибок.
+- [ ] START guidelines процитированы с источниками.
 
 Когда все галочки стоят — MVP готов.
+
+---
+
+## Documentation map
+
+| Документ | О чём |
+|---|---|
+| [`docs/architecture.md`](architecture.md) | Архитектура системы, компоненты, поток данных |
+| [`docs/api-contract.md`](api-contract.md) | Контракт API между frontend и backend (стабилен) |
+| [`docs/ai-pipeline-v2.md`](ai-pipeline-v2.md) | **Главный документ по новому AI-пайплайну** |
+| [`docs/ai-triage-rules.md`](ai-triage-rules.md) | Triage-правила (v1; обновляется под START в Phase 1) |
+| [`docs/roles-and-scope.md`](roles-and-scope.md) | Распределение ролей |
+| [`docs/roadmap.md`](roadmap.md) | План реализации и demo checklist (этот документ) |
