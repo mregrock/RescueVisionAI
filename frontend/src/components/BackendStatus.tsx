@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, API_BASE_URL } from '../api/client'
+import { api, API_BASE_LABEL } from '../api/client'
 
 type Status = 'checking' | 'ok' | 'down'
 
@@ -41,13 +41,13 @@ export function BackendStatus() {
     status === 'ok'
       ? `backend online${version ? ` · v${version}` : ''}`
       : status === 'down'
-        ? `backend offline (${API_BASE_URL})`
+        ? `backend offline (${API_BASE_LABEL})`
         : 'проверка backend…'
 
   return (
     <div
       className="flex items-center gap-2 text-xs sm:text-sm text-slate-300"
-      title={API_BASE_URL}
+      title={API_BASE_LABEL}
     >
       <span className={`inline-block h-2.5 w-2.5 rounded-full ${dot}`} />
       <span className="truncate">{label}</span>

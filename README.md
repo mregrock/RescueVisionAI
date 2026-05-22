@@ -46,7 +46,33 @@ AI-ассистент для спасателей МЧС, который ана�
 
 ---
 
-## Quick start (backend)
+## Quick start (всё одной командой)
+
+Frontend + backend в Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+После старта:
+
+- **Frontend (UI спасателя):** http://localhost:8080
+- **Backend Swagger:** http://localhost:8000/docs
+- **Backend health:** http://localhost:8000/api/v1/health
+
+Фронт собирается в production (vite build), отдаётся через nginx, который
+проксирует `/api/*` на backend — всё работает в одной compose-сети без CORS.
+Frontend запускается после того, как backend ответил `healthcheck`.
+
+Остановить:
+
+```bash
+docker compose down
+```
+
+---
+
+## Quick start (backend отдельно, dev-режим)
 
 Требуется Python 3.11+.
 
@@ -100,14 +126,17 @@ RVA_LOG_LEVEL=WARNING
 
 ### Запуск через Docker
 
+Только backend:
+
 ```bash
 docker build -t rescue-vision-ai-backend -f backend/Dockerfile .
 docker run --rm -p 8000:8000 rescue-vision-ai-backend
 ```
 
-Или через Docker Compose:
+Backend + frontend вместе (см. секцию «Quick start» в начале):
+
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 ### Тесты и линтер

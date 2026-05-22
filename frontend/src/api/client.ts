@@ -6,11 +6,15 @@ import type {
   ProtocolsList,
 } from './types'
 
+const ENV_BASE = import.meta.env.VITE_API_BASE_URL as string | undefined
+
 const RAW_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
-  'http://localhost:8000'
+  ENV_BASE === undefined
+    ? 'http://localhost:8000'
+    : ENV_BASE.replace(/\/$/, '')
 
 export const API_BASE_URL = RAW_BASE
+export const API_BASE_LABEL = RAW_BASE || `${window.location.origin} (same origin)`
 const API_PREFIX = '/api/v1'
 
 export class ApiError extends Error {
