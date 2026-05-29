@@ -17,29 +17,35 @@ API-контракт **не меняется** — фронт не трогае�
   ↓
 YOLOv8n + YOLOv8n-pose   (готовые, off-the-shelf, инфраструктура)
   ↓
-17 keypoints на каждого человека
+для каждого человека: bbox + 17 keypoints
   ↓
-⭐ Pose Classifier MLP   (наша обученная нейросеть, ~5K параметров)
+  ├── 17 keypoints ──→ ⭐ Pose Classifier MLP   (наша нейросеть #1, ~5K параметров)
+  │                         pose ∈ {lying, sitting, standing, falling}
+  │
+  └── bbox crop ─────→ ⭐ Injury Classifier CNN  (наша нейросеть #2, MobileNetV3)
+                            injuries ⊆ {bleeding, severe_bleeding, burns, fracture}
   ↓
-pose ∈ {lying, sitting, standing, falling} + confidence
-  ↓
-⭐ Motion Analysis       (наш CV-компонент, optical flow по серии кадров, опц.)
-  ↓
-motion ∈ {no_movement, weak_movement, active_movement}
+(опц.) ⭐ Motion Analysis — optical flow по серии кадров → motion
   ↓
 ⭐ START Triage Engine   (наш rule engine на основе протокола FEMA)
+  → severity_score + priority   (НАСКОЛЬКО СРОЧНО)
   ↓
-severity_score + priority + recommended_actions + protocols
+⭐ Advisor v2             (наш rule engine на сигналах)
+  → recommended_actions + first_aid + protocols   (ЧТО ДЕЛАТЬ)
   ↓
 JSON по существующему контракту
 ```
 
+Принципиальное разделение: **pose + START** дают *срочность и порядок обхода*, **injury CNN + advisor** дают *конкретные инструкции* (перевязать, охладить ожог, иммобилизовать). Без injury-сети пайплайн обрывается на severity и не знает, что советовать — это и была «дыра», см. Компоненты 4–5.
+
 **«Наше» в этом пайплайне:**
-1. Pose Classifier MLP (обученная нами модель + датасет + метрики)
-2. Motion analysis pipeline (наша реализация классического CV)
-3. START Triage Engine (наша реализация международного медицинского протокола)
-4. Multi-modal архитектура и интеграция
-5. Frontend и full-stack продукт
+1. Pose Classifier MLP (нейросеть #1: обученная модель + датасет + метрики)
+2. Injury/Condition Classifier CNN (нейросеть #2: характер травмы по кропу bbox)
+3. Motion analysis pipeline (наша реализация классического CV, опц.)
+4. START Triage Engine (наша реализация международного медицинского протокола)
+5. Advisor v2 (rule-based decision-слой: сигналы → инструкции)
+6. Multi-modal архитектура и интеграция
+7. Frontend и full-stack продукт
 
 **«Не наше» (инфраструктура):**
 - YOLOv8n / YOLOv8n-pose (pretrained на COCO, скачиваются через `ultralytics`)
@@ -529,6 +535,210 @@ def triage_start(pose, motion, pose_confidence):
 2. **Decision tree диаграмма** — Mermaid в README
 3. **Маппинг START → API** — таблица
 4. **Тесты** — для каждой комбинации (pose, motion, confidence) проверяем что выдаёт нужный severity. ~20 unit тестов.
+
+---
+
+## Компонент 4: Injury / Condition Classifier — вторая нейросеть
+
+> Это раздел, **закрывающий архитектурную дыру** v2. До него пайплайн обрывался на `severity_score`, и было непонятно, откуда брать конкретные инструкции «перевяжи / охлади ожог / иммобилизуй». Pose-classifier и START дают **приоритет и срочность**, но не **характер травмы**. За характер травмы отвечает отдельная, вторая наша нейросеть.
+
+### Зачем нужна именно нейросеть (а не правила)
+
+В v1 травмы определялись HSV-масками (`_color_signals`, `_smoke_detected`) — и это была главная причина переписывания: «любая открытая кожа на тёплом свете → severe_bleeding», «любой коричневый объект → burns_visible». Геометрия keypoints здесь не помогает в принципе: **кровь и ожог — это визуальная текстура и цвет, а не поза скелета**. Pose-classifier (MLP на 51 числе) их физически «не видит» — на вход ему идут только координаты суставов.
+
+Значит, чтобы вернуть травмо-специфичные советы, нужен **отдельный перцептивный компонент, работающий с пикселями кропа**, а не с keypoints. Это и есть вторая обученная модель.
+
+### Что это за сеть
+
+**Injury/Condition Classifier** — multi-label классификатор изображения по кропу bbox пострадавшего.
+
+| Параметр | Значение |
+|---|---|
+| Задача | Multi-label image classification (у одного пострадавшего может быть несколько травм одновременно) |
+| Backbone | **MobileNetV3-Small**, предобучен на ImageNet, дообучаем (fine-tune) последние блоки + голову |
+| Параметров | ~2.5M (backbone) + наша голова. Вес ~6–10 MB |
+| Вход | Кроп bbox человека → resize 224×224×3, нормализация ImageNet |
+| Выход | Вектор вероятностей по N состояниям, **sigmoid** (не softmax — классы не взаимоисключающие) |
+| Время инференса | ~5–15 мс на CPU на один кроп |
+
+Почему MobileNetV3, а не ResNet/EfficientNet-B7: нужен лёгкий backbone для полевого CPU-инференса, а датасет травм небольшой — тяжёлая сеть переобучится. MobileNetV3-Small — стандартный выбор для on-device классификации.
+
+### Классы (выходные состояния)
+
+| Класс | id | Как выглядит в кадре | Восстанавливает сигнал v1 |
+|---|---|---|---|
+| `bleeding` | 0 | Видимая кровь, окрашивание одежды/кожи | `bleeding_visible` |
+| `severe_bleeding` | 1 | Лужа крови, обильное окрашивание, артериальное | `severe_bleeding` |
+| `burns` | 2 | Ожоговая поверхность, обугливание, волдыри | `burns_visible` |
+| `fracture_deformity` | 3 | Неестественное положение/деформация конечности | `possible_fracture` |
+| `no_visible_injury` | 4 | Травм визуально не видно (negative-класс) | — |
+
+Ключевой момент: **выход injury-классификатора маппится 1-в-1 в те же signal-строки, что уже использует `advisor` в v1** (`bleeding_visible`, `severe_bleeding`, `burns_visible`, `possible_fracture`). Поэтому decision-слой переписывать почти не нужно — мы просто заменяем источник этих сигналов с «HSV-эвристики» на «обученную CNN».
+
+### Архитектура (skeleton)
+
+```python
+# backend/ai/injury_classifier.py
+import torch
+import torch.nn as nn
+from torchvision.models import mobilenet_v3_small, MobileNet_V3_Small_Weights
+
+INJURY_CLASSES = ["bleeding", "severe_bleeding", "burns", "fracture_deformity", "no_visible_injury"]
+
+class InjuryClassifier(nn.Module):
+    def __init__(self, num_classes: int = 5):
+        super().__init__()
+        backbone = mobilenet_v3_small(weights=MobileNet_V3_Small_Weights.IMAGENET1K_V1)
+        in_features = backbone.classifier[0].in_features
+        # Замораживаем ранние блоки, дообучаем хвост + голову
+        backbone.classifier = nn.Sequential(
+            nn.Linear(in_features, 128),
+            nn.Hardswish(),
+            nn.Dropout(0.3),
+            nn.Linear(128, num_classes),
+        )
+        self.backbone = backbone
+
+    def forward(self, x):
+        return self.backbone(x)  # логиты; sigmoid применяем при инференсе
+```
+
+```python
+_THRESHOLDS = {  # пороги подбираются по PR-кривой на val, recall-oriented
+    "bleeding": 0.45, "severe_bleeding": 0.55,
+    "burns": 0.50, "fracture_deformity": 0.55,
+}
+
+@torch.no_grad()
+def classify_injuries(crop_bgr, bbox) -> list[str]:
+    x = _preprocess_crop(crop_bgr, bbox)          # → (1, 3, 224, 224)
+    probs = torch.sigmoid(_get_model()(x))[0]
+    signals = [
+        INJURY_CLASSES[i]
+        for i, p in enumerate(probs)
+        if INJURY_CLASSES[i] in _THRESHOLDS and p >= _THRESHOLDS[INJURY_CLASSES[i]]
+    ]
+    return signals
+```
+
+### Куда встраивается в пайплайн
+
+Injury-классификатор — это **вторая параллельная ветка восприятия** рядом с pose-классификатором. После YOLO-pose у нас на каждого человека уже есть и `bbox`, и `17 keypoints`. Дальше расходимся на две независимые сети:
+
+```
+YOLOv8n-pose
+   ├── 17 keypoints ──→ ⭐ Pose Classifier MLP  ──→ pose ∈ {standing, sitting, lying, falling}
+   └── bbox crop ─────→ ⭐ Injury Classifier CNN ──→ injuries ⊆ {bleeding, severe_bleeding, burns, fracture}
+                                  │                            │
+                                  ▼                            ▼
+                       (pose + severity от START)      (injury signals)
+                                  └────────────┬───────────────┘
+                                               ▼
+                                  RawVictim.signals = [pose, *injuries]
+                                               ▼
+                                  ⭐ Advisor v2 (rule-based)
+```
+
+То есть две сети **не зависят друг от друга** и не каскадят ошибки: даже если pose ошибётся, injury-сеть независимо детектирует кровотечение, и наоборот. Это сохраняет принцип v1 «ошибка одной модели не порождает опасной рекомендации».
+
+### Контракт с внутренними структурами
+
+Обе ветки сливаются в существующий `RawVictim` из [`backend/ai/types.py`](backend/ai/types.py:67) — менять структуру не нужно:
+
+```python
+RawVictim(
+    local_id=i,
+    bbox=[x1, y1, x2, y2],
+    signals=[
+        pose,            # "lying" | "sitting" | "standing" | "falling"   (от MLP)
+        *injuries,       # "bleeding_visible" | "severe_bleeding" | "burns_visible" | "possible_fracture"  (от CNN)
+        *motion_signals, # "no_movement" | "weak_movement"  (опц., от motion analysis)
+    ],
+)
+```
+
+Поскольку сигналы те же, что в v1, **`severity_score` снова становится осмысленным**: `severe_bleeding` (+0.45) и прочие веса из [`VICTIM_SIGNAL_WEIGHTS`](backend/ai/types.py:40) опять вносят вклад, а не только поза. Дыра «severity есть, а инструкций нет» закрывается тем, что мы вернули в score информацию о травме.
+
+### Датасет
+
+| Источник | Что даёт | Лицензия |
+|---|---|---|
+| **Roboflow Universe** — поиск `wound detection`, `bleeding`, `burn classification`, `bone fracture` | Готовые размеченные изображения ран/ожогов/крови | в основном CC BY |
+| **Medical wound datasets** (напр. AZH Wound, DFU) | Раны крупным планом для класса `bleeding`/`severe_bleeding` | research-use |
+| **Самосбор + аугментация** (грим/реквизит, кетчуп-моделирование, синтетика) | Контролируемые negative/positive примеры | наша |
+| **Hard negatives** | Красная одежда, тёплый свет, коричневая мебель/волосы — чтобы убить ложные срабатывания v1 | наша |
+
+**Объём для MVP:** 300–500 примеров на класс. Размечаем как multi-label (один кроп может иметь и `bleeding`, и `fracture_deformity`).
+
+**Этическая граница:** реалистичные снимки тяжёлых травм пострадавших собирать сложно и неэтично, поэтому MVP-версия injury-сети честно помечается как **«ограниченной чувствительности, требует валидации с медиками»** в `quality.notes`. Это не отменяет архитектуру — модель встроена, пайплайн целостный, а качество растёт по мере накопления датасета.
+
+### Метрики (целевые)
+
+| Метрика | Цель MVP | Комментарий |
+|---|---|---|
+| Recall `severe_bleeding` | ≥ 0.90 | пропустить артериальное кровотечение нельзя |
+| Precision `severe_bleeding` | ≥ 0.70 | ложные тревоги терпимы, но не лавиной |
+| F1 macro (multi-label) | ≥ 0.70 | стартовая планка |
+| FP-rate на hard negatives (красная одежда и т.п.) | ≤ 0.10 | прямой контр-тест к косяку v1 |
+
+### Что показывать на защите
+
+1. Вторая обученная нейросеть со своим датасетом и метриками — усиливает тезис «у нас две собственные модели, а не один YOLO».
+2. **Прямое сравнение с v1**: на тех же hard-negative кадрах (красная футболка, тёплый свет) HSV-маска кричит `severe_bleeding`, а CNN — молчит. Наглядная демонстрация ценности обучения.
+3. Confusion / PR-кривые по классам.
+
+---
+
+## Компонент 5: Advisor v2 — от сигналов к инструкциям
+
+Теперь, когда injury-сеть вернула травмо-сигналы, `advisor` снова работает **как в v1 — на сигналах**, и почти не требует переписывания. Это и есть финал «докрученной мысли»: severity отвечает за **порядок** обхода, а сигналы (поза + травмы + движение) — за **содержание** инструкций.
+
+### Поток «severity + сигналы → инструкции»
+
+```
+RawVictim.signals = [pose, *injuries, *motion]
+        │
+        ├── classifier (START + веса)  ──→ severity_score, severity_label   (НАСКОЛЬКО СРОЧНО)
+        │
+        └── advisor (rule-based)       ──→ recommended_actions               (ЧТО ДЕЛАТЬ)
+                                            per-victim first_aid
+                                            protocols[]
+        │
+        ▼
+ranker (severity → priority)  ──→  порядок обхода пострадавших
+        │
+        ▼
+JSON по существующему контракту
+```
+
+### Триггеры advisor v2
+
+Старый advisor (см. [`advisor.py`](backend/ai/advisor.py:99)) уже умеет всё нужное — меняем только источник сигналов и добавляем 2 правила под новые позы:
+
+| Условие включения | Action id | Источник сигнала |
+|---|---|---|
+| всегда | `ensure_safety` | — |
+| всегда | `primary_assessment` | — |
+| `lying` или `no_movement` в signals | `check_consciousness_breathing` | pose / motion |
+| `severity == critical` (lying + no_movement) | `start_bls` | pose + motion |
+| `bleeding_visible` / `severe_bleeding` в signals | `stop_bleeding` | **injury CNN** |
+| `burns_visible` в signals | `treat_burns` (новый, протокол `burns`) | **injury CNN** |
+| `possible_fracture` в signals | `immobilize` (новый, протокол `fractures`) | **injury CNN** |
+| `pose == falling` | `fall_support` (новый) | pose |
+| `pose == standing` и `severity == low` | `direct_to_safe_zone` (новый, walking wounded) | pose + severity |
+| `people_count >= 2` | `mass_triage` | scene |
+| `low_confidence == true` | `low_confidence_warning` | quality |
+
+Протоколы `burns` и `fractures` **уже есть** в [`protocols.json`](protocols.json:79) — в v1 они были «мёртвыми» (никто не выставлял сигнал). С injury-сетью они оживают.
+
+### Итог: дыра закрыта
+
+| Вопрос «дыры» | Ответ v2 |
+|---|---|
+| Откуда берётся «что делать», если на входе только severity? | severity отвечает за **срочность/порядок**, а **содержание** инструкций — из сигналов (поза + injury CNN + motion) |
+| Нужна ли вторая нейросеть? | **Да** — Injury/Condition Classifier (CNN на кропе bbox), параллельная ветка к pose-MLP |
+| Куда она встраивается? | Сразу после YOLO-pose: `bbox crop → InjuryClassifier → injury signals → RawVictim.signals → advisor` |
+| Сколько нужно переписать в decision-слое? | Минимум: injury-сигналы совпадают с v1, advisor лишь получает «честные глаза» вместо HSV-эвристики |
 
 ---
 
